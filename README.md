@@ -2,10 +2,11 @@
 Visualization tool tailored for Design Space Exploration
 
 Owner: Rajesh Kedia (CSE, IIT Delhi).<br />
-Contributors: 1. Manish Yadav, IIT Delhi (May - July 2017)<br />
-              2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)<br />
-              3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)<br />
-              4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)<br />
+Contributors:<br />
+1. Manish Yadav, IIT Delhi (May - July 2017)<br />
+2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)<br />
+3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)<br />
+4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)<br />
 
 
 Description: <br />
