@@ -12,6 +12,7 @@ from PyQt4 import QtGui, QtCore
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import proj3d
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage, AnnotationBbox)
+from matplotlib.patches import Rectangle
 
 
 def plotter (fig,canvas,v):
@@ -29,8 +30,10 @@ def plotter (fig,canvas,v):
 	
 	plotPointsX = []																			# list of list of x,y,z points that is passed to plot function of matplotlib to plot the graph
 	plotPointsY = []																				
-	plotPointsZ = []																			
-	
+	plotPointsZ = []
+
+	partitionedPoints = []																		# lift of lists of points partitioned by shape and colour
+
 	fieldLengthList = []																		# list of lengths of fieldnames in the .csv (input file)
 	fieldList = []																					# list fields in the .csv (input file)
 	fieldNumber = 1																			# no. of fields in .csv (input file)
@@ -43,6 +46,7 @@ def plotter (fig,canvas,v):
 	
 	distinctValues1 = 0																		# no. of 3rd para (shape) values 
 	distinctValues2 = 0																		# no. of 3rd para (shape) values 
+	distinctValues3 = 0																		# no. of x-axis values (needed if we are making a bar graph)
 	plotLines1 = []																				
 	plotLines2 = []
 
@@ -91,7 +95,7 @@ def plotter (fig,canvas,v):
 			for j in numberFields :
 
 				if t.value == j:
-					t.value = [float(i[fieldList.index(j)]) for i in dataBase]											# setting the value as the whole column that is specified in the formula
+					t.value = [float(i[fieldList.index(j)]) for i in dataBase]		# setting the value as the whole column that is specified in the formula
 					break
 			return t
 
@@ -207,7 +211,7 @@ def plotter (fig,canvas,v):
 	# configLines[0][14] --> upper limit z axis
 	# configLines[0][15] --> no of numerical fields in the .csv(input file)
 	# configLines[0][16] to configLines[0][x] --> fieldname , upper limit (selected in column filtering) , lower limit (selected in column filtering) (for numerical fields)
-	# configLines[0][-3] --> type of graph (line/scatter)
+	# configLines[0][-3] --> type of graph (line/scatter/histogram/bar)
 	# configLines[0][-2] --> empty for curve fit disabled else degree of polynomial
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -276,7 +280,6 @@ def plotter (fig,canvas,v):
 			if ch == ',':
 				# add fieldLength to the list
 				fieldLengthList.append(fieldLength)
-				# print(fieldLength)
 				fieldLength = 0
 				fieldNumber = fieldNumber + 1
 			elif ch == '\n':
@@ -301,23 +304,20 @@ def plotter (fig,canvas,v):
 			fileRow=f.readline().split(",")
 			if fileRow == [""]:
 				break
-			#print(fileRow)
 			fileRowNumber = fileRowNumber + 1
 			try:
 				fileRow.remove('\n')
 			except:
 				pass
 			dataBase.append(fileRow)
-			#fileRow=f.readline().split(",")
-			#print(fileRow)
 	finally:
 		f.close()
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	cType =  configLines[0][-3] 																									# type of graph - line or scatter
+	cType =  configLines[0][-3] 					# type of graph - line or scatter
 
-	if configLines[0][-2] !='':																										# set the degree of polynomial for curve fitting
+	if configLines[0][-2] !='':					# set the degree of polynomial for curve fitting
 		curveFit = 'True'
 		deg = configLines[0][-2]
 		#print "deg = " + deg
@@ -432,15 +432,40 @@ def plotter (fig,canvas,v):
 			plotPointsX.append([])
 			plotPointsY.append([])
 			plotPointsZ.append([])
+			partitionedPoints.append([])
 			details.append([])
 			i += 1
 	else :
 		while i < distinctValues1 * distinctValues2 :
 			plotPointsX.append([])
 			plotPointsY.append([])
+			partitionedPoints.append([])
 			details.append([])
 			i += 1
 	
+	# checking for number of distinct values of x-axis for making a bar-graph (should be smaller than 8 for this to be possible)
+	if cType == "bar-graph":
+		enaDiff3 = fieldList.index(configLines[0][1])
+		distinctVals3 = []																															# list of distinct values in the 4th para field
+		i = 0
+		while i < fileRowNumber :																										# set distinctVals2 and distinctValues2
+			try:
+				tempIndex = distinctVals3.index(dataBase[i][enaDiff3])
+			except:
+				distinctVals3.append(dataBase[i][enaDiff3])
+				distinctValues3 += 1
+			if distinctValues3 > 8: 									#if we get more than 8 values we cannot make the bar-graph
+				distinctValues3 = float("inf")
+				break
+			i += 1
+		if distinctValues3 < 8 and distinctValues3 > 1:
+			distinctVals3.sort()
+			min_diff_x = float("inf")
+			for index_diff in range(1,len(distinctVals3)):
+				if float(distinctVals3[index_diff]) - float(distinctVals3[index_diff-1]) < min_diff_x:
+					min_diff_x = float(distinctVals3[index_diff]) - float(distinctVals3[index_diff-1])	
+	else :
+		distinctValues3 = float("inf")
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	# points stored in xPoints,yPoints and zPoints are detrmined to be valid or not based on column filtering, x axis sliders, y axis sliders
@@ -541,76 +566,6 @@ def plotter (fig,canvas,v):
 				m += 1
 			i += 1
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	i = 0
-
-	# if paretopoints are enabled - find the pareto points and add them to paretoPoints
-
-	if configLines[0][3] == '3' :
-		if configLines[0][4] == '1' :
-			tempList = sorted(filterPoints)
-			paretoPoints.append(tempList[0])
-			j = 0
-			for x_,y_,z_ in tempList :
-				if y_ >= paretoPoints[j][1] :
-					paretoPoints.append((x_,y_,z_))
-					j+=1
-			paretoPoints.pop(0)
-		elif configLines[0][4] == '2' :
-			tempList = sorted(filterPoints)
-			paretoPoints.append(tempList[0])
-			j = 0
-			for x_,y_,z_ in tempList :
-				if y_ <= paretoPoints[j][1] :
-					paretoPoints.append((x_,y_,z_))
-					j+=1
-			paretoPoints.pop(0)
-		elif configLines[0][4] == '3' :
-			tempList = sorted(filterPoints,reverse=True)
-			paretoPoints.append(tempList[0])
-			j = 0
-			for x_,y_,z_ in tempList :
-				if y_ >= paretoPoints[j][1] :
-					paretoPoints.append((x_,y_,z_))
-					j+=1
-			paretoPoints.pop(0)
-		elif configLines[0][4] == '4' :
-			tempList = sorted(filterPoints,reverse=True)
-			paretoPoints.append(tempList[0])
-			j = 0
-			for x_,y_,z_ in tempList :
-				if y_ <= paretoPoints[j][1] :
-					paretoPoints.append((x_,y_,z_))
-					j+=1
-			paretoPoints.pop(0)
-
-#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-# set the plotPointsX,Y,Z depending if 3d/pareto points or none 
-
-	if configLines[0][3] == '3' :
-		if distinctValues1 > 1 and distinctValues2 > 1 :
-			for k in paretoPoints :
-				dex = distinctVals1.index(dataBase[k[2]][enaDiff1])*distinctValues2 + distinctVals2.index(dataBase[k[2]][enaDiff2])
-				plotPointsX[dex].append(k[0])
-				plotPointsY[dex].append(k[1])
-				details[dex].append(k[2])
-		elif distinctValues1 > 1:
-			for k in paretoPoints :
-				dex = distinctVals1.index(dataBase[k[2]][enaDiff1])
-				plotPointsX[dex].append(k[0])
-				plotPointsY[dex].append(k[1])
-				details[dex].append(k[2])
-		elif distinctValues2 > 1:
-			for k in paretoPoints :
-				dex = distinctVals2.index(dataBase[k[2]][enaDiff2])
-				plotPointsX[dex].append(k[0])
-				plotPointsY[dex].append(k[1])
-				details[dex].append(k[2])
-		else :
-			for k in paretoPoints :
-				plotPointsX[0].append(k[0])
-				plotPointsY[0].append(k[1])
-				details[0].append(k[2])
 
 	i = 0
 	if configLines[0][3] == '1' :
@@ -671,6 +626,82 @@ def plotter (fig,canvas,v):
 				plotPointsY[0].append(k[1])
 				details[0].append(k[2])
 
+	if configLines[0][3] == '3' :
+		if distinctValues1 > 1 and distinctValues2 > 1 :
+			for k in filterPoints :
+				dex = distinctVals1.index(dataBase[k[2]][enaDiff1])*distinctValues2 + distinctVals2.index(dataBase[k[2]][enaDiff2])
+				partitionedPoints[dex].append(k)
+		elif distinctValues1 > 1:
+			for k in filterPoints :
+				dex = distinctVals1.index(dataBase[k[2]][enaDiff1])
+				partitionedPoints[dex].append(k)
+		elif distinctValues2 > 1:
+			for k in filterPoints :
+				dex = distinctVals2.index(dataBase[k[2]][enaDiff2])
+				partitionedPoints[dex].append(k)
+		else :
+			for k in filterPoints :
+				partitionedPoints[0].append(k)
+		ind = 0
+		for colourList in partitionedPoints:
+			paretoPoints =[]
+			if configLines[0][4] == '1' :
+				tempList = sorted(colourList)
+				paretoPoints.append(tempList[0])
+				j = 0
+				for x_,y_,z_ in tempList :
+					if y_ >= paretoPoints[j][1] :
+						paretoPoints.append((x_,y_,z_))
+						j+=1
+				paretoPoints.pop(0)
+				for k in paretoPoints:
+					plotPointsX[ind].append(k[0])
+					plotPointsY[ind].append(k[1])
+					details[ind].append(k[2])
+				ind += 1
+			elif configLines[0][4] == '2' :
+				tempList = sorted(colourList)
+				paretoPoints.append(tempList[0])
+				j = 0
+				for x_,y_,z_ in tempList :
+					if y_ <= paretoPoints[j][1] :
+						paretoPoints.append((x_,y_,z_))
+						j+=1
+				paretoPoints.pop(0)
+				for k in paretoPoints:
+					plotPointsX[ind].append(k[0])
+					plotPointsY[ind].append(k[1])
+					details[ind].append(k[2])
+				ind += 1
+			elif configLines[0][4] == '3' :
+				tempList = sorted(colourList,reverse=True)
+				paretoPoints.append(tempList[0])
+				j = 0
+				for x_,y_,z_ in tempList :
+					if y_ >= paretoPoints[j][1] :
+						paretoPoints.append((x_,y_,z_))
+						j+=1
+				paretoPoints.pop(0)
+				for k in paretoPoints:
+					plotPointsX[ind].append(k[0])
+					plotPointsY[ind].append(k[1])
+					details[ind].append(k[2])
+				ind += 1
+			elif configLines[0][4] == '4' :
+				tempList = sorted(colourList,reverse=True)
+				paretoPoints.append(tempList[0])
+				j = 0
+				for x_,y_,z_ in tempList :
+					if y_ <= paretoPoints[j][1] :
+						paretoPoints.append((x_,y_,z_))
+						j+=1
+				paretoPoints.pop(0)
+				for k in paretoPoints:
+					plotPointsX[ind].append(k[0])
+					plotPointsY[ind].append(k[1])
+					details[ind].append(k[2])
+				ind += 1
+				
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # check if any error else make the graph and display
@@ -704,87 +735,110 @@ def plotter (fig,canvas,v):
 		msg.setWindowTitle("Error")
 		msg.setStandardButtons(QMessageBox.Ok)
 		msg.exec_()
+	elif distinctValues3 > 8 and cType == "bar-graph":
+		msg = QMessageBox()
+		msg.setIcon(QMessageBox.Warning)
+		msg.setText("X-Axis has too many values for a bar-graph")
+		msg.setWindowTitle("Error")
+		msg.setStandardButtons(QMessageBox.Ok)
+		msg.exec_()
+	else:          # no error plot graph
+		if cType == 'histogram':
+			ax.set_xlabel(configLines[0][1])
+			ax.set_ylabel("frequency")
+			ax.set_title(configLines[0][7])
 
-	else:																																											# no error plot graph
-		i = 0
-		ax.set_xlabel(configLines[0][1])
-		ax.set_ylabel(configLines[0][2])
-		ax.set_title(configLines[0][7])
-		if configLines[0][3] != '1' :																															# 3d disabled
-			while i < distinctValues1 * distinctValues2 :
-				
-				if cType == 'scatter':
-					Line, = ax.plot(plotPointsX[i],plotPointsY[i],style[int(i/distinctValues2)],color=colour[int(i%distinctValues2)])
-				elif cType =='line':
-					Line, = ax.plot(plotPointsX[i],plotPointsY[i],color=colour[int(i%distinctValues2)])
-				
-				if curveFit != 'False':																																# curvefit enabled
-					pX=[]
-					for j in plotPointsX :
-						pX=pX+j
-					pY =[]
-					for j in plotPointsY:
-						pY=pY+j
-					coeff = pf (pX,pY,int(deg),rcond=None, full=False, w=None, cov=False)
-					cList=[]
-					for j in coeff:
-						if j<0.01:
-							cList.append(0)
-						else:
-							cList.append(round(j,2))
-					k=0
-					txt = ''
-					while k<int(deg):
-						txt =txt+'a'+str(k)+'='+str(cList.pop())+','
-						k+=1
-					txt=txt+'a'+str(k)+'='+str(cList.pop())
-					#ax.text(0.1,0.1,txt)
-					ax.text(0.95, 0.01, txt,verticalalignment='bottom', horizontalalignment='right',transform=ax.transAxes,color='black', fontsize=10)
-					
-				if i < distinctValues2:
-					plotLines1.append(Line)
-				if distinctValues2 == 1:
-					plotLines2.append(Line)
-				elif i%distinctValues2 == 1 :
-					plotLines2.append(Line)
-				line.append(Line)
-				print (int(i/distinctValues1),int(i%distinctValues2))
-				
-				i = i + 1
-		else :																																															#3d enabled
-			ax.set_zlabel(configLines[0][4])
-			while i < distinctValues1 * distinctValues2 :
-				
-				if cType == 'scatter':
-					Line, = ax.plot(plotPointsX[i],plotPointsY[i],plotPointsZ[i],style[int(i/distinctValues2)],color=colour[int(i%distinctValues2)])
-				elif cType =='line':
-					Line, = ax.plot(plotPointsX[i],plotPointsY[i],plotPointsZ[i],color=colour[int(i%distinctValues2)])
-					
-				if i < distinctValues2:
-					plotLines1.append(Line)
-				if distinctValues2 == 1:
-					plotLines2.append(Line)
-				elif i%distinctValues2 == 1 :
-					plotLines2.append(Line)
-				line.append(Line)
-				print (int(i/distinctValues1),int(i%distinctValues2))
-				
-				i = i + 1
+			# n, bins, patches = plt.hist(plotPointsX, 50, normed=1, facecolor='g', alpha=0.75)
+			# plt.hist([x, y], color=['g','r'], alpha=0.75, bins=50)
 
-		if bool(xDict) :
-			plt.xticks([value for key, value in xDict.items()],[key for key, value in xDict.items()],rotation=70)
-		if bool(yDict) :
-			plt.yticks([value for key, value in yDict.items()],[key for key, value in yDict.items()],rotation=0)
-		if bool(zDict) :
-			ax.set_zticklabels([value for key, value in zDict.items()],[key for key, value in zDict.items()])
-		
-		if configLines[0][6] != '' :
-			legend1 = ax.legend(plotLines1,distinctVals2,loc='center', bbox_to_anchor=(0.99, 0.9),title = configLines[0][6])
-			# check whether plt.gca() works , it does work in this standalone program
-			fig.gca().add_artist(legend1)
-		if configLines[0][5] != '' and cType != 'line' :
-			ax.legend(plotLines2,distinctVals1,loc='center', bbox_to_anchor=(0.01, 0.9),title = configLines[0][5])
-		
+			handles = [Rectangle((0,0),1,1,color=colour[int(i%distinctValues2)] ,ec="k") for i in range(distinctValues2)]
+			ax.legend(handles, distinctVals2,loc='center', bbox_to_anchor=(0.99, 0.9),title = configLines[0][6])
+
+			ax.hist([plotPointsX[i] for i in range(distinctValues2)], color=[colour[int(i%distinctValues2)] for i in range(distinctValues2)], alpha=0.8, bins=50)
+		else:																	
+			i = 0
+			ax.set_xlabel(configLines[0][1])
+			ax.set_ylabel(configLines[0][2])
+			ax.set_title(configLines[0][7])
+			if configLines[0][3] != '1' :											# 3d disabled
+				while i < distinctValues1 * distinctValues2 :
+					
+					if cType == 'scatter':
+						Line, = ax.plot(plotPointsX[i],plotPointsY[i],style[int(i/distinctValues2)],color=colour[int(i%distinctValues2)])
+					elif cType == 'bar-graph':
+						Line, = ax.plot([float(plotPointsX[i][j]) + i * min_diff_x * 0.06 for j in range(len(plotPointsX[i]))],plotPointsY[i],style[int(i/distinctValues2)],color=colour[int(i%distinctValues2)])
+					elif cType =='line':
+						Line, = ax.plot(plotPointsX[i],plotPointsY[i],color=colour[int(i%distinctValues2)])
+					
+					
+					if curveFit != 'False':												# curvefit enabled
+						pX=[]
+						for j in plotPointsX :
+							pX=pX+j
+						pY =[]
+						for j in plotPointsY:
+							pY=pY+j
+						coeff = pf (pX,pY,int(deg),rcond=None, full=False, w=None, cov=False)
+						cList=[]
+						for j in coeff:
+							if j<0.01:
+								cList.append(0)
+							else:
+								cList.append(round(j,2))
+						k=0
+						txt = ''
+						while k<int(deg):
+							txt =txt+'a'+str(k)+'='+str(cList.pop())+','
+							k+=1
+						txt=txt+'a'+str(k)+'='+str(cList.pop())
+						#ax.text(0.1,0.1,txt)
+						ax.text(0.95, 0.01, txt,verticalalignment='bottom', horizontalalignment='right',transform=ax.transAxes,color='black', fontsize=10)
+						
+					if i < distinctValues2:
+						plotLines1.append(Line)
+					if distinctValues2 == 1:
+						plotLines2.append(Line)
+					elif i%distinctValues2 == 1 :
+						plotLines2.append(Line)
+					line.append(Line)
+					#print (int(i/distinctValues1),int(i%distinctValues2))
+					
+					i = i + 1
+			else :																																															#3d enabled
+				ax.set_zlabel(configLines[0][4])
+				while i < distinctValues1 * distinctValues2 :
+					
+					if cType == 'scatter':
+						Line, = ax.plot(plotPointsX[i],plotPointsY[i],plotPointsZ[i],style[int(i/distinctValues2)],color=colour[int(i%distinctValues2)])
+					elif cType =='line':
+						Line, = ax.plot(plotPointsX[i],plotPointsY[i],plotPointsZ[i],color=colour[int(i%distinctValues2)])
+						
+					if i < distinctValues2:
+						plotLines1.append(Line)
+					if distinctValues2 == 1:
+						plotLines2.append(Line)
+					elif i%distinctValues2 == 1 :
+						plotLines2.append(Line)
+					line.append(Line)
+					#print (int(i/distinctValues1),int(i%distinctValues2))
+					
+					i = i + 1
+
+			if bool(xDict) :
+				plt.xticks([value for key, value in xDict.items()],[key for key, value in xDict.items()],rotation=70)
+			if bool(yDict) :
+				plt.yticks([value for key, value in yDict.items()],[key for key, value in yDict.items()],rotation=0)
+			if bool(zDict) :
+				ax.set_zticklabels([value for key, value in zDict.items()],[key for key, value in zDict.items()])
+			
+			if configLines[0][6] != '' :
+				legend1 = ax.legend(plotLines1,distinctVals2,loc='center', bbox_to_anchor=(0.99, 0.9),title = configLines[0][6])
+				# check whether plt.gca() works , it does work in this standalone program
+				fig.gca().add_artist(legend1)
+			if configLines[0][5] != '' and cType != 'line' :
+				ax.legend(plotLines2,distinctVals1,loc='center', bbox_to_anchor=(0.01, 0.9),title = configLines[0][5])
+			
 		canvas.draw()
 		fig.canvas.mpl_connect('motion_notify_event', hover)
+
 	f.close()

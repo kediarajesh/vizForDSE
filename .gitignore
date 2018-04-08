@@ -1,0 +1,9 @@
+# Mac-OS files
+.DS_Store
+
+*.pyc
+ply/*.pyc
+out_cfg.csv
+constraints.ecl
+generated.csv
+file.txt

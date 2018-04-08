@@ -12,6 +12,7 @@ from sys import stdout
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4 import QtGui, QtCore
+import os
 
 #matplotlib.use("QT4Agg")
 	
@@ -26,7 +27,12 @@ ull = []														#temporary variable used to calculate upper limit (ull = u
 out_list = []													#stores the items to be outputted in configure file
 curr_filename = ""												#stores the current file name
 change = 0														#used to sync the sliders and combo boxes
-
+cons={}															#dictionary to store values of fields applied in generate constraints box		
+final_constraints=[]											#list of all constraints to generate constraints file
+undo_old = ""													#stores old configuration string which can be recovered on pressing undo		
+undo_new = ""													#stores configuration string on update press
+write = ""														#stores the string to be written in constraints.ecl
+range_constraints_string =""									#hardcoded string (added for now for the tool)
 class col_filtering_window(QWidget):							#defines the class for column filtering window
 	def __init__(self):
 		super(col_filtering_window,self).__init__()
@@ -228,6 +234,299 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 		self.close()
 
 
+
+	
+class update_constraints_window(QWidget):			# WINDOW TO GENERATE CONSTRAINTS FILE
+	def __init__(self):
+		super(update_constraints_window,self).__init__()
+		self.setWindowTitle(" Setting constraints ")
+
+
+		self.cb = QComboBox()
+		self.cb.clear()
+		
+
+		# LOWER
+		self.lower_limit_label = QLabel("Lower limit: ")
+		self.lower_limit = QLineEdit()
+		self.lower_limit_label.setEnabled(False)
+		self.lower_limit.setEnabled(False)
+
+		lay_lower_limit = QHBoxLayout();
+		lay_lower_limit.addWidget(self.lower_limit_label)
+		lay_lower_limit.addWidget(self.lower_limit)
+
+		self.enable_lower_limit = QCheckBox("Enable lower limit")
+		self.enable_lower_limit.setChecked(False)
+		self.enable_lower_limit.stateChanged.connect(self.lower_limit_func)
+
+		lower_limitf = QVBoxLayout();
+		lower_limitf.addWidget(self.enable_lower_limit)
+		lower_limitf.addLayout(lay_lower_limit)
+
+
+		#	UPPER
+		self.upper_limit_label = QLabel("Upper Limit: ")
+		self.upper_limit = QLineEdit()
+		self.upper_limit_label.setEnabled(False)
+		self.upper_limit.setEnabled(False)
+
+		lay_upper_limit = QHBoxLayout();
+		lay_upper_limit.addWidget(self.upper_limit_label)
+		lay_upper_limit.addWidget(self.upper_limit)
+
+		self.enable_upper_limit = QCheckBox("Enable upper limit")
+		self.enable_upper_limit.setChecked(False)
+		self.enable_upper_limit.stateChanged.connect(self.upper_limit_func)
+
+		upper_limitf = QVBoxLayout();
+		upper_limitf.addWidget(self.enable_upper_limit)
+		upper_limitf.addLayout(lay_upper_limit)
+
+
+		# DISCRETE VALUES
+		self.allowed_values_label = QLabel("List of allowed values: ")
+		self.allowed_values = QLineEdit()
+		self.allowed_values_label.setEnabled(False)
+		self.allowed_values.setEnabled(False)
+
+		lay_allowed_values = QHBoxLayout();
+		lay_allowed_values.addWidget(self.allowed_values_label)
+		lay_allowed_values.addWidget(self.allowed_values)
+
+		self.enable_allowed_values = QCheckBox("Enable values insertion")
+		self.enable_allowed_values.setChecked(False)
+		self.enable_allowed_values.stateChanged.connect(self.discrete_values_func)
+
+		allowed_valuesf = QVBoxLayout();
+		allowed_valuesf.addWidget(self.enable_allowed_values)
+		allowed_valuesf.addLayout(lay_allowed_values)
+
+		
+		choose = QVBoxLayout();
+		choose.addLayout(lower_limitf)
+		choose.addLayout(upper_limitf)
+		choose.addLayout(allowed_valuesf)
+
+		
+		lay_constraints = QHBoxLayout()
+		lay_constraints.addWidget(self.cb)
+		lay_constraints.addLayout(choose)
+
+
+		self.apply_but = QPushButton('&Apply')
+		self.apply_but.setDefault(True)
+		self.apply_but.clicked.connect(self.apply_func)
+
+		self.generate_but = QPushButton('&Generate')
+		self.generate_but.setDefault(True)
+		self.generate_but.clicked.connect(self.generate_func)
+
+		self.cancel_but = QPushButton('&Cancel')
+		self.cancel_but.setDefault(True)
+		self.cancel_but.clicked.connect(self.cancel_func)
+
+		lay_buttons = QHBoxLayout()
+		lay_buttons.addWidget(self.apply_but)
+		lay_buttons.addWidget(self.generate_but)
+		lay_buttons.addWidget(self.cancel_but)
+
+
+		layout_final = QVBoxLayout()                          #final layout of window
+		layout_final.addLayout(lay_constraints)
+		layout_final.addLayout(lay_buttons)
+		
+
+		self.setLayout(layout_final)
+
+	def lower_limit_func(self):								#to enable/disable lower limit bar
+		if self.enable_lower_limit.isChecked():
+			self.lower_limit_label.setEnabled(True)
+			self.lower_limit.setEnabled(True)
+
+			self.enable_allowed_values.setEnabled (False)
+		else:
+			self.lower_limit_label.setEnabled(False)
+			self.lower_limit.setEnabled(False)
+
+			self.enable_allowed_values.setEnabled (True)
+			
+
+	def upper_limit_func(self):								#to enable/disable upper limit bar
+		if self.enable_upper_limit.isChecked():
+			self.upper_limit_label.setEnabled(True)
+			self.upper_limit.setEnabled(True)
+
+			self.enable_allowed_values.setEnabled (False)
+		else:
+			self.upper_limit_label.setEnabled(False)
+			self.upper_limit.setEnabled(False)
+
+			self.enable_allowed_values.setEnabled (True)
+			
+
+	def discrete_values_func(self):								#to enable/disable discrete values bar
+		if self.enable_allowed_values.isChecked():
+			self.allowed_values_label.setEnabled(True)
+			self.allowed_values.setEnabled(True)
+
+			self.enable_lower_limit.setEnabled (False)
+			self.enable_upper_limit.setEnabled (False)
+
+		else:
+			self.allowed_values_label.setEnabled(False)
+			self.allowed_values.setEnabled(False)
+
+			self.enable_lower_limit.setEnabled (True)
+			self.enable_upper_limit.setEnabled (True)
+
+
+
+	def apply_func(self):										#stores the upper and lower limit of the current field(as set by user) in cons{}
+		
+		global cons
+		b=str(PyQt4.QtCore.QString(self.cb.currentText()))
+		if (self.enable_allowed_values.isChecked()):
+			values = (self.allowed_values.text())
+			cons[b]=[3,str(values)]
+			#print cons[b]
+		elif (self.enable_lower_limit.isChecked() and self.enable_upper_limit.isChecked()):
+			ll = float(self.lower_limit.text())
+			ul = float(self.upper_limit.text())
+			if (ll>ul):
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Warning)
+				msg.setText("Lower limit greater than upper limit")
+				msg.setWindowTitle("Error")
+				msg.setStandardButtons(QMessageBox.Ok)
+				msg.exec_()
+			else:
+				cons[b]=[2,ll,ul]
+		elif (self.enable_lower_limit.isChecked()):
+			ll=float(self.lower_limit.text())
+			cons[b]=[0,ll]
+		elif (self.enable_upper_limit.isChecked()):
+			ul = float(self.upper_limit.text())
+			cons[b]=[1,ul]
+
+		self.lower_limit.setText('')
+		self.upper_limit.setText('')
+		self.allowed_values.setText('')
+		self.lower_limit_label.setEnabled(False)
+		self.lower_limit.setEnabled(False)
+		self.upper_limit_label.setEnabled(False)
+		self.upper_limit.setEnabled(False)
+		self.enable_lower_limit.setChecked(False)
+		self.enable_upper_limit.setChecked(False)
+		self.enable_allowed_values.setChecked(False)	
+
+
+
+
+	def generate_func(self):						
+
+		global cons 									# dictionary to store the final constraints
+		global final_constraints						
+		global undo_old
+		global undo_new
+		global write
+		global range_constraints_string
+		b=str(PyQt4.QtCore.QString(self.cb.currentText()))
+		if (self.enable_allowed_values.isChecked()):
+			values = (self.allowed_values.text())
+			cons[b]=[3,str(values)]									# 3 denotes insertion of discrete values
+			#print cons[b]
+		elif (self.enable_lower_limit.isChecked() and self.enable_upper_limit.isChecked()):
+			ll = float(self.lower_limit.text())
+			ul = float(self.upper_limit.text())
+			if (ll>ul):
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Warning)
+				msg.setText("Lower limit greater than upper limit")
+				msg.setWindowTitle("Error")
+				msg.setStandardButtons(QMessageBox.Ok)
+				msg.exec_()
+			else:
+				cons[b]=[2,ll,ul]									# 2 implies both upper and lower limits have been specified
+		elif (self.enable_lower_limit.isChecked()):
+			ll=float(self.lower_limit.text())
+			cons[b]=[0,ll]											# 0 if only the lower limit specified
+		elif (self.enable_upper_limit.isChecked()):
+			ul = float(self.upper_limit.text())
+			cons[b]=[1,ul]											# 1 if only the upper limit is specified
+
+		#final_constraints list created from the dictionary cons to be written in to the contrainsts file
+		if (len(cons)==0):
+			final_constraints.append(-1)
+			
+		else:	
+			for field in cons:
+				final_constraints.append(field)
+				for values in cons[field]:
+					final_constraints.append(values)
+		f = open("constraints.ecl","w+")
+		write = ""
+		a = final_constraints[:-1]
+		# The list is parsed and the string to be written into the file is created
+		i = 0
+		while i < len(a):
+			if final_constraints[i+1] == 0:
+				write += '\n\t'+final_constraints[i].strip()+' $>= '+str(int(final_constraints[i+2]))+','
+				i += 3
+			elif final_constraints[i+1] == 1:
+				write += '\n\t'+final_constraints[i].strip()+' $=< '+str(int(final_constraints[i+2]))+','
+				i += 3
+			elif final_constraints[i+1] == 2:
+				write += '\n\t'+final_constraints[i].strip()+' $>= '+str(int(final_constraints[i+2]))+','
+				write += '\n\t'+final_constraints[i].strip()+' $=< '+str(int(final_constraints[i+3]))+','
+				i += 4
+			else:
+				write += '\n\t'+final_constraints[i].strip()+' :: '+str(map(int,final_constraints[i+2].split(" ")))+','
+				i += 3
+		if len(write)>0:
+			write = write[:-1] + '.'; 
+		range_constraints_string = "range_constraints("
+		for i in fields[:-1]:
+			range_constraints_string += i.strip()+", ";
+		if (len(fields)>0):
+			range_constraints_string += fields[-1].strip()
+		range_constraints_string += ") :-"
+		range_constraints_string = "range_constraints(Ncore, Battery, MinFrames, WS, Atotal, Blife, Weight) :-" #These fields have been hardcoded for now as it was found some of these fields are necessary for tool to run
+		# Remove the above line to make the constraints file according to the fields of the currently open file
+		# range_constraints_string += "\t\nNcore :: [1,2,4,8],\n"
+		# range_constraints_string += "\tBattery :: [1,2,3,4],\n"
+		# range_constraints_string += "\tMinFrames :: [3],\n"
+		# range_constraints_string += "\tWS :: [25,50,75,100,125,150],"
+		# These are the fields that were present in the original test file
+		undo_old = undo_new
+		undo_new = write
+		f.write(range_constraints_string)
+		f.write(write);
+		f.close() #constraints file updated
+		self.close()
+		os.system("../eclipse/bin/x86_64_linux/eclipse -f ../eclipse/tmp/test.ecl -f constraints.ecl -e main,fail") #tool called
+		file_change = open("file.txt","r")
+		newfile = open("generated.csv","w") #generated.csv removes the leading and trailing brackets present in each line of file.txt
+		x = file_change.readlines()
+		for i in x:
+			newfile.write(i[1:-2]+'\n')
+		file_change.close()
+		newfile.close()
+
+	def cancel_func(self):										#resets all the constraints set after opening this window
+		global final_constraints
+		del final_constraints[:]
+		global cons
+		cons.clear()
+	def addItemsinCB(self):   									#adds fields to the combo box with stripped spaces
+		self.cb.clear()
+		self.cb.addItems([i.strip() for i in fields])    
+	
+
+		
+		
+
+
 class sub_window(QWidget):										#class defining the sub windows(as they appear in tabs)
 
 	subwindow_id = 0
@@ -251,6 +550,9 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.graph_type_cb = QComboBox()
 		self.graph_type_cb.addItem("scatter")
 		self.graph_type_cb.addItem("line")
+		self.graph_type_cb.addItem("histogram")
+		self.graph_type_cb.addItem("bar-graph")
+
 
 		lay_graph_type = QVBoxLayout()
 
@@ -266,6 +568,10 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.enable_curve_fitting = QCheckBox("Enable curve fitting")
 		self.enable_curve_fitting.setChecked(False)
 		self.enable_curve_fitting.stateChanged.connect(self.curve_fitting_func)
+
+
+		self.graph_type_cb.currentIndexChanged.connect(self.selectionchangetype)
+
 
 		lay_curve_fitting_h = QHBoxLayout()
 		lay_curve_fitting_v = QVBoxLayout()
@@ -323,6 +629,8 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 
 		lay_title = QHBoxLayout()        #title layout
 
+		title_f = QVBoxLayout()
+
 		lay_xx = QHBoxLayout()           #layout containins lay_x_s and drop down box for x-axis
 		lay_yy = QHBoxLayout()           #layout containing lay_y_s and drop down box for y-axis
 		lay_33 = QVBoxLayout()
@@ -361,6 +669,19 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.column_filtering_but = QPushButton('&Column Filtering')
 		self.column_filtering_but.setDefault(True)
 		self.column_filtering_but.clicked.connect(self.column_filtering_func)
+
+		
+		self.swap_axis_but = QPushButton('&Swap Axis')
+		self.swap_axis_but.setDefault(True)
+		self.swap_axis_but.clicked.connect(self.swap_axis_func)
+
+		self.update_constraints_but = QPushButton('&Generate constraints file')
+		self.update_constraints_but.setDefault(True)
+		self.update_constraints_but.clicked.connect(self.constraints_file_func)
+
+		self.undo_but = QPushButton('&Undo')
+		self.undo_but.setDefault(True)
+		self.undo_but.clicked.connect(self.undo_func)
 
 		self.enable_cb_3 = QCheckBox("Enable Third Parameter")
 		self.enable_cb_3.setChecked(False)
@@ -524,6 +845,7 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		lay_44.addWidget(self.enable_cb_4)
 		lay_zz.addLayout(lay_z_field)
 		lay_zz.addLayout(lay_z_s)
+		lay_zz.addWidget(self.enable_3d)
 
 		lay_y_custom.addLayout(lay_yy)
 		lay_y_custom.addLayout(lay_custom)
@@ -537,17 +859,21 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 
 		lay_up_cb.addWidget(self.update_but)
 		lay_up_cb.addWidget(self.column_filtering_but)
-		lay_up_cb.addWidget(self.enable_title)
-		lay_up_cb.addWidget(self.enable_3d)
+		lay_up_cb.addWidget(self.swap_axis_but)
+		lay_up_cb.addWidget(self.update_constraints_but)
+		lay_up_cb.addWidget(self.undo_but)
 
 		lay_title.addWidget(self.title_label)
 		lay_title.addWidget(self.title_name)
+
+		title_f.addWidget(self.enable_title)
+		title_f.addLayout(lay_title)
 
 		layout_az.addLayout(lay_3_4)
 		layout_az.addLayout(lay_curve_fit_graph_type)
 		layout_az.addWidget(group_box_pareto)
 
-		layout.addLayout(lay_title)
+		layout.addLayout(title_f)
 		layout.addWidget(group_box_x)
 		layout.addWidget(group_box_y)
 		layout.addWidget(group_box_z)
@@ -557,7 +883,12 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		lay_gv.addWidget(self.canvas)
 		lay_gv.addWidget(self.toolbar)
 
-		final_layout.addLayout(layout)
+		#Making the widget resizable and scrollable
+		scroll = QScrollArea()          
+		temp = QWidget()
+		temp.setLayout(layout)
+		scroll.setWidget(temp)		
+		final_layout.addWidget(scroll)	
 		final_layout.addLayout(lay_gv)
 
 		self.slxl.valueChanged.connect(self.print_x_l)
@@ -566,12 +897,26 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.slyh.valueChanged.connect(self.print_y_h)
 		self.slzl.valueChanged.connect(self.print_z_l)
 		self.slzh.valueChanged.connect(self.print_z_h)	
-
+		
 		self.setLayout(final_layout)
-
 		self.cb_axes.addItem("Z-Axis")
 
 		self.col_fil = col_filtering_window()
+		self.set_cons= update_constraints_window()
+	def undo_func(self):						#runs the old version used for generating the constraints file
+		f = open("constraints.ecl","w+")
+		f.write(range_constraints_string)
+		f.write(undo_old);
+		f.close()
+		os.system("../eclipse/bin/x86_64_linux/eclipse -f ../eclipse/tmp/test.ecl -f constraints.ecl -e main,fail")
+		file_change = open("file.txt","r")
+		newfile = open("generated.csv","w")
+		x = file_change.readlines()
+		for i in x:
+			newfile.write(i[1:-2]+'\n')
+		file_change.close()
+		newfile.close()
+	
 
 	def pareto_func(self):										#to enable and disable the widgets in the pareto window
 		if self.enable_plot_pareto.isChecked():
@@ -629,7 +974,8 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 														#which is used by the second module(plot.py)
 		
 		global out_list									#list which stores all the above mentioned parameters which is used by
-														#cfg_writer to write in 'out_cfg.csv'
+													#cfg_writer to write in 'out_cfg.csv'
+		global final_constraints
 		global col_fil_list
 		global col_with_strings
 		out_cfg = open("out_cfg.csv",'w')
@@ -701,6 +1047,8 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 				for key in col_fil_list:
 					tup = col_fil_list[key]
 					out_list.extend([key,tup[0],tup[1]])
+					
+				out_list.extend(final_constraints)
 
 				out_list.append(self.graph_type_cb.currentText())
 				if self.enable_curve_fitting.isChecked():
@@ -711,6 +1059,14 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 				cfg_writer.writerow(out_list)
 				out_cfg.close()
 				self.call_plot()						#calls the call_plot function which calles the plotter function from plot.py
+
+
+	def constraints_file_func(self):
+		global final_constraints
+		del final_constraints[:]
+		cons.clear()
+		self.set_cons.show()
+		self.set_cons.addItemsinCB()
 
 	def call_plot(self):
 		if self.enable_3d.isChecked():
@@ -765,6 +1121,18 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 	def column_filtering_func(self):					#shows the column filtering window
 		self.col_fil.show()
 
+	def swap_axis_func(self):
+		xlabel = self.cbx.currentText()
+		ylabel = self.cby.currentText()
+		if not self.enable_custom_formula.isChecked():
+			index_in_cbx = self.cbx.findText(ylabel)
+			index_in_cby = self.cby.findText(xlabel)
+			if index_in_cby >= 0 and index_in_cby >= 0:
+				self.cbx.setCurrentIndex(index_in_cbx)
+				self.cby.setCurrentIndex(index_in_cby)
+				self.selectionchangex()
+				self.selectionchangey()
+				self.update_plot()
 	def spzl_valuechange(self):							#sets lower value of z-axis slider based on spin box value
 		global change
 		change = 1
@@ -843,10 +1211,49 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 			a = (int)(self.spyh.value())
 		self.slyh.setValue(a)
 
+
+
+	def selectionchangetype(self):
+		b = str(PyQt4.QtCore.QString(self.graph_type_cb.currentText()))
+		if b=="histogram":
+			self.slyl.setEnabled(False)
+			self.slyh.setEnabled(False)
+			self.spyh.setEnabled(False)
+			self.spyl.setEnabled(False)
+			self.cby.setEnabled(False)
+			self.enable_custom_formula.setEnabled(False)
+			self.enable_curve_fitting.setEnabled(False)
+			self.enable_plot_pareto.setEnabled(False)
+			self.enable_cb_3.setEnabled(False)
+
+
+
+		elif b == "bar-graph":
+			self.slyl.setEnabled(True)
+			self.slyh.setEnabled(True)
+			self.spyh.setEnabled(True)
+			self.spyl.setEnabled(True)
+			self.cby.setEnabled(True)
+			self.enable_curve_fitting.setEnabled(False)
+			self.enable_plot_pareto.setEnabled(False)
+			self.enable_cb_3.setEnabled(False)
+			self.enable_custom_formula.setEnabled(False)
+
+		else:
+			self.slyl.setEnabled(True)
+			self.slyh.setEnabled(True)
+			self.spyh.setEnabled(True)
+			self.spyl.setEnabled(True)
+			self.cby.setEnabled(True)
+			self.enable_custom_formula.setEnabled(True)
+			self.enable_curve_fitting.setEnabled(True)
+			self.enable_plot_pareto.setEnabled(True)
+			self.enable_cb_3.setEnabled(True)
+
 	def selectionchangex(self):							#changes the upper and lower limits of sliders/spin boxes based on the current selected field
 														#also disables them if the current field has strings as values(X-AXIS)
 		b = str(PyQt4.QtCore.QString(self.cbx.currentText()))
-		print "--->" + b
+		#print "--->" + b
 		if b in col_with_strings:
 			self.spxl.setEnabled(False)
 			self.spxh.setEnabled(False)
@@ -979,7 +1386,7 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 				a = lower_limit[b] + (((float)(self.slzh.value())/100) * (upper_limit[b] - lower_limit[b]))
 			else:
 				a = (float)(self.slzh.value())
-			self.spzh.setValue(a)      
+			self.spzh.setValue(a)
 
 class tabs(QTabWidget):									#used to implement tabs
 														#each tab contains a sub window as defined above
