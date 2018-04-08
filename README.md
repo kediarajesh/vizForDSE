@@ -1,25 +1,25 @@
 # vizForDSE
 Visualization tool tailored for Design Space Exploration
 
-Owner: Rajesh Kedia (CSE, IIT Delhi).
-Contributors: 1. Manish Yadav, IIT Delhi (May - July 2017)
-              2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)
-              3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)
-              4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)
+Owner: Rajesh Kedia (CSE, IIT Delhi).<br />
+Contributors: 1. Manish Yadav, IIT Delhi (May - July 2017)<br />
+              2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)<br />
+              3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)<br />
+              4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)<br />
 
 
-Description: 
+Description: <br />
 
 This is a python based visualization tool which can do generic plotting of data present in csv files. We hope this to be useful when you don't want to write a script to plot the data and want to observe the behavior of the data first.
-The work under development also includes being able to generate constraints in CLP format and use the CLP tool to perform pruning of design points.
+The work under development also includes being able to generate constraints in CLP format and use the CLP tool to perform pruning of design points.<br />
 
-There are various help documents prepared to help the users understand the interface of the tool.
+There are various help documents prepared to help the users understand the interface of the tool.<br />
 Starter guide: https://docs.google.com/document/d/e/2PACX-1vRG7XnZ8qOi3RlXKGATuPzoFae09JCIP-yQE4Ws-3BckeBBSeeMum0XApC3uafGaJFGBBPPBBtVeKoW/pub
 
 Videos:
-1. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v1.mp4
-2. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v3.mp4
-3. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v5.mp4
+1. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v1.mp4 <br />
+2. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v3.mp4 <br />
+3. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v5.mp4 <br />
 
 
 Using the package:
