@@ -2,13 +2,16 @@
 Visualization tool tailored for Design Space Exploration
 
 Owner: Rajesh Kedia (CSE, IIT Delhi).
-Contributors: Manish Yadav, IIT Delhi
-              Sanket Sanjay Dhakate, IIT Delhi
+Contributors: 1. Manish Yadav, IIT Delhi (May - July 2017)
+              2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)
+              3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)
+              4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)
 
 
 Description: 
 
 This is a python based visualization tool which can do generic plotting of data present in csv files. We hope this to be useful when you don't want to write a script to plot the data and want to observe the behavior of the data first.
+The work under development also includes being able to generate constraints in CLP format and use the CLP tool to perform pruning of design points.
 
 There are various help documents prepared to help the users understand the interface of the tool.
 Starter guide: https://docs.google.com/document/d/e/2PACX-1vRG7XnZ8qOi3RlXKGATuPzoFae09JCIP-yQE4Ws-3BckeBBSeeMum0XApC3uafGaJFGBBPPBBtVeKoW/pub
