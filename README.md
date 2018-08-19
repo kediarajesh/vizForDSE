@@ -7,6 +7,7 @@ Contributors:<br />
 2. Sanket Sanjay Dhakate, IIT Delhi (May - July 2017)<br />
 3. Rajas Bansal, IIT Delhi (Dec 2017 - Jan 2018)<br />
 4. Vrittika Bagadia, IIT Delhi (Dec 2017 - Jan 2018)<br />
+5. Twinkal Meena, IIT Delhi (June 2018 - August 2018)<br />
 
 
 Description: <br />
@@ -80,3 +81,6 @@ Open 'generated.csv' and press the update button to get the plot.
 7. Undo button:
 If the plot obtained after setting some new constraints is unsatisfactory, the previous plot can be retrieved by pressing the undo button.
 
+8. Support for dumping script: generates a python script which can be used to generate the same plot. This is useful when someone wants to do custom changes, not supported by the tool. See http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/scriptdump.mp4
+
+9. Various different visualization options and controls added: Based on common usage in the research community, certain features are added especially in bargraph and histogram. See http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/bargraph.mp4 and http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/histogram.mp4
