@@ -14,6 +14,18 @@ from PyQt4.QtGui import *
 from PyQt4 import QtGui, QtCore
 import os
 
+if(os.path.isfile("objs.pkl") == True):
+	os.remove("objs.pkl")
+if(os.path.isfile("objs_sd.pkl") == True):
+	os.remove("objs_sd.pkl")
+if(os.path.isfile("out_cfg.csv") == True):
+	os.remove("out_cfg.csv")
+if(os.path.isfile("out_cfg1.csv") == True):
+	os.remove("out_cfg1.csv")
+if(os.path.isfile("out_cfg0.csv") == True):
+	os.remove("out_cfg0.csv")
+
+
 #matplotlib.use("QT4Agg")
 	
 fields = []														#stores the column(field) names
@@ -39,12 +51,49 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 
 		self.setWindowTitle("Column Filtering")
 
+
 		lay_range = QVBoxLayout()
 		lay_main = QHBoxLayout()
 		lay_but = QHBoxLayout()
 		lay_final = QVBoxLayout()
 		lay_l = QHBoxLayout()
 		lay_h = QHBoxLayout()
+
+		lay_filters_label = QHBoxLayout()
+		
+		self.field = QLabel("Field")
+		self.field.setAlignment(Qt.AlignLeft)
+		self.lowerlim = QLabel("Lower Limit")
+		self.lowerlim.setAlignment(Qt.AlignLeft)
+		self.upperlim = QLabel("Upper Limit")
+		self.upperlim.setAlignment(Qt.AlignLeft)
+
+		lay_filters_label.addWidget(self.field)
+		lay_filters_label.addWidget(self.lowerlim)
+		lay_filters_label.addWidget(self.upperlim)
+
+		lay_filters = QHBoxLayout()              #for displaying already applied column filters
+		self.display = QTextEdit()
+		self.display.setReadOnly(True)
+		self.display.setAlignment(Qt.AlignLeft)
+
+		self.enable_noresize = QCheckBox("Do not automatically resize axes")
+		self.enable_noresize.setEnabled(True)
+		self.enable_noresize.setChecked(False)
+
+
+		self.displ = QTextEdit()
+		self.displ.setReadOnly(True)
+		self.displ.setAlignment(Qt.AlignLeft)
+
+		self.dispu = QTextEdit()
+		self.dispu.setReadOnly(True)
+		self.dispu.setAlignment(Qt.AlignLeft)
+
+
+		lay_filters.addWidget(self.display)
+		lay_filters.addWidget(self.displ)
+		lay_filters.addWidget(self.dispu)
 
 		self.low = QLabel("Lower Limit")
 		self.low.setAlignment(Qt.AlignLeft)
@@ -106,10 +155,32 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 		lay_but.addWidget(self.cancel_but,0,Qt.AlignRight)
 		lay_but.addWidget(self.reset_all_but,0,Qt.AlignRight)
 
+		lay_final.addLayout(lay_filters_label)
+		lay_final.addLayout(lay_filters)
 		lay_final.addLayout(lay_main)
-		lay_final.addLayout(lay_but)	
+		lay_final.addWidget(self.enable_noresize)
+		lay_final.addLayout(lay_but)
+
 
 		self.setLayout(lay_final)
+
+
+	def for_undo_redo(self):								  #Restores the values of column filters after undo or redo
+		global col_fil_list
+		global col_with_strings
+		global fields
+		
+		self.selectionchange()
+
+		self.display.clear()
+		self.displ.clear()
+		self.dispu.clear()
+
+		for xy in fields:
+			if xy not in col_with_strings:
+				self.display.append(xy)
+				self.displ.append(str(col_fil_list[xy][0]))
+				self.dispu.append(str(col_fil_list[xy][1]))
 
 	def sp_l_valuechange(self):									#changes value of lower slider based on value of lower spin box
 		global change
@@ -187,6 +258,11 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 			self.sl_h.setValue(a)
 
 	def reset_all_func(self):									#Resets the sliders and spin boxes in column filtering window
+		global col_fil_list
+		global lower_limit
+		global upper_limit
+		global col_with_strings
+		global fields
 		for b in col_fil_list.keys():
 			col_fil_list[b]=(lower_limit[b],upper_limit[b])
 		b = str(PyQt4.QtCore.QString(self.cb.currentText()))
@@ -195,8 +271,22 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 		self.sl_l.setValue(0)
 		self.sl_h.setValue(100)
 
+		self.display.clear()
+		self.displ.clear()
+		self.dispu.clear()
+
+		for xy in fields:
+			if xy not in col_with_strings:
+				self.display.append(xy)
+				self.displ.append(str(col_fil_list[xy][0]))
+				self.dispu.append(str(col_fil_list[xy][1]))
+
 	def apply_func(self):										#stores the upper and lower limit of the current field(as set by user) in col_fill_list[]
 		global col_fil_list
+		global lower_limit
+		global upper_limit
+		global col_with_strings
+		global fields
 		b = str(PyQt4.QtCore.QString(self.cb.currentText()))
 		if self.sp_l.value()>self.sp_h.value():					
 			msg = QMessageBox()
@@ -208,10 +298,24 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 		else:
 			col_fil_list[b]=(self.sp_l.value(),self.sp_h.value())
 
+		self.display.clear()
+		self.displ.clear()
+		self.dispu.clear()
+
+		for xy in fields:
+			if xy not in col_with_strings:
+				self.display.append(xy)
+				self.displ.append(str(col_fil_list[xy][0]))
+				self.dispu.append(str(col_fil_list[xy][1]))
+
+
+
 	def cancel_func(self):										#resets the value of current field if previously stored(changess it back to the maximum upper limit and minimum lower limit as seen from file)
 		global col_fil_list
 		global lower_limit
 		global upper_limit
+		global col_with_strings
+		global fields
 		b = str(PyQt4.QtCore.QString(self.cb.currentText()))
 		col_fil_list[b]=(lower_limit[b],upper_limit[b])
 		self.sp_l.setValue(lower_limit[b])
@@ -219,8 +323,22 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 		self.sl_l.setValue(0)
 		self.sl_h.setValue(100)
 
+		self.display.clear()
+		self.displ.clear()
+		self.dispu.clear()
+
+		for xy in fields:
+			if xy not in col_with_strings:
+				self.display.append(xy)
+				self.displ.append(str(col_fil_list[xy][0]))
+				self.dispu.append(str(col_fil_list[xy][1]))
+
 	def ok_func(self):											#same as apply, but closes the column filtering window afterwards
 		global col_fil_list
+		global lower_limit
+		global upper_limit
+		global col_with_strings
+		global fields
 		b = str(PyQt4.QtCore.QString(self.cb.currentText()))
 		if self.sp_l.value()>self.sp_h.value():
 			msg = QMessageBox()
@@ -231,6 +349,17 @@ class col_filtering_window(QWidget):							#defines the class for column filteri
 			msg.exec_()
 		else:
 			col_fil_list[b]=(self.sp_l.value(),self.sp_h.value())
+
+		self.display.clear()
+		self.displ.clear()
+		self.dispu.clear()
+
+		for xy in fields:
+			if xy not in col_with_strings:
+				self.display.append(xy)
+				self.displ.append(str(col_fil_list[xy][0]))
+				self.dispu.append(str(col_fil_list[xy][1]))
+
 		self.close()
 
 
@@ -536,8 +665,8 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		group_box_x = QGroupBox('&X-Axis')
 		group_box_y = QGroupBox('&Y-Axis')
 		group_box_z = QGroupBox('&Z-Axis/Secondary Y-Axis')
-		group_box_3 = QGroupBox('&Third Parameter(Shape)')
-		group_box_4 = QGroupBox('&Fourth Parameter(Color)')
+		group_box_3 = QGroupBox('&Third Parameter(Default:Color)')
+		group_box_4 = QGroupBox('&Fourth Parameter(shape/Grouping)')
 		group_box_pareto = QGroupBox('&Pareto Parameters')
 		group_box_type_of_graph = QGroupBox('&Type of Graph')
 		group_box_curve_fitting = QGroupBox('&Curve Fitting')
@@ -545,6 +674,7 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		lay_3_4 = QVBoxLayout()
 		lay_3_4.addWidget(group_box_3)
 		lay_3_4.addWidget(group_box_4)
+		
 
 		self.graph_type = QLabel("Select Type:")									#Adding things in graph_type combo box
 		self.graph_type_cb = QComboBox()
@@ -552,12 +682,43 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.graph_type_cb.addItem("line")
 		self.graph_type_cb.addItem("histogram")
 		self.graph_type_cb.addItem("bar-graph")
+		self.graph_type_cb.addItem("bar-scatter")
 
+
+		#new segment of code to add if min max or avg in bar graph
+		self.bargraph_cb = QComboBox()
+		self.bargraph_cb.addItem("Minimum")
+		self.bargraph_cb.addItem("Average")
+		self.bargraph_cb.addItem("Maximum")
+		self.bargraph_cb.addItem("All")
+		self.bargraph_cb.setEnabled(False)
+		self.bargraph_cb.currentIndexChanged.connect(self.bargraph_func)
+
+		#new segment of code to enable labelling y value on bars 
+		self.enable_yval = QCheckBox("Enable values on bars")
+		self.enable_yval.setChecked(False)
+		self.enable_yval.setEnabled(False)
+
+		#new segment of code to add if normalization or not
+		self.norm = QLabel("Normalization:")
+		self.norm.setAlignment(Qt.AlignRight)
+		self.norm.setEnabled(False)
+		self.norm_cb = QComboBox()
+		self.norm_cb.addItem("Yes")
+		self.norm_cb.addItem("No")
+		self.norm_cb.setEnabled(False)
+		lay_norm = QHBoxLayout() 
+		lay_norm.addWidget(self.norm)
+		lay_norm.addWidget(self.norm_cb)
 
 		lay_graph_type = QVBoxLayout()
 
 		lay_graph_type.addWidget(self.graph_type)
-		lay_graph_type.addWidget(self.graph_type_cb)		
+		lay_graph_type.addWidget(self.graph_type_cb)
+		lay_graph_type.addWidget(self.bargraph_cb)
+		lay_graph_type.addLayout(lay_norm)
+		lay_graph_type.addWidget(self.enable_yval)
+
 		group_box_type_of_graph.setLayout(lay_graph_type)		
 
 		self.degree_label = QLabel("Enter degree:")									
@@ -683,9 +844,18 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.undo_but.setDefault(True)
 		self.undo_but.clicked.connect(self.undo_func)
 
+		self.redo_but = QPushButton('&Redo')
+		self.redo_but.setDefault(True)
+		self.redo_but.clicked.connect(self.redo_func)
+
 		self.enable_cb_3 = QCheckBox("Enable Third Parameter")
 		self.enable_cb_3.setChecked(False)
 		self.enable_cb_3.stateChanged.connect(self.enable_func_3)
+
+		self.barstyle_cb = QComboBox()
+		self.barstyle_cb.addItem("Color")
+		self.barstyle_cb.addItem("Pattern")
+		self.barstyle_cb.setEnabled(False)
 		
 		self.enable_cb_4 = QCheckBox("Enable Fourth Parameter")
 		self.enable_cb_4.setChecked(False)
@@ -728,6 +898,76 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		self.zh = QLabel("Upper Limit")
 		self.zh.setAlignment(Qt.AlignLeft)		
 		self.zh.setEnabled(False)
+
+		#**************new segment for custom x,y axis label********************
+		lay_xlabelf = QVBoxLayout()
+		lay_xlabel = QHBoxLayout()
+
+		lay_ylabelf = QVBoxLayout()
+		lay_ylabel = QHBoxLayout()
+
+		self.enable_xlabel = QCheckBox("Enable X-Axis Label")
+		self.enable_xlabel.setChecked(False)
+		self.enable_xlabel.stateChanged.connect(self.xlabel_func)
+
+		self.enable_ylabel = QCheckBox("Enable Y-Axis Label")
+		self.enable_ylabel.setChecked(False)
+		self.enable_ylabel.stateChanged.connect(self.ylabel_func)
+
+		self.xlabel_label = QLabel("X-Axis Label:")
+		self.xlabel_name = QLineEdit()
+		self.xlabel_label.setEnabled(False)
+		self.xlabel_name.setEnabled(False)
+
+		self.ylabel_label = QLabel("Y-Axis Label:")
+		self.ylabel_name = QLineEdit()
+		self.ylabel_label.setEnabled(False)
+		self.ylabel_name.setEnabled(False)
+
+		lay_xlabel.addWidget(self.xlabel_label)
+		lay_xlabel.addWidget(self.xlabel_name)
+
+		lay_ylabel.addWidget(self.ylabel_label)
+		lay_ylabel.addWidget(self.ylabel_name)
+
+		lay_xlabelf.addWidget(self.enable_xlabel)
+		lay_xlabelf.addLayout(lay_xlabel)
+
+		lay_ylabelf.addWidget(self.enable_ylabel)
+		lay_ylabelf.addLayout(lay_ylabel)
+		#************new segment******************
+		self.enable_interval = QCheckBox("Enable interval range")
+		self.enable_interval.setEnabled(False)
+		self.enable_interval.setChecked(False)
+		self.enable_interval.stateChanged.connect(self.interval_func)
+
+		self.interval = QLabel("Interval Range:")
+		self.interval.setAlignment(Qt.AlignRight)
+		self.interval.setEnabled(False)
+
+		self.interval_box = QLineEdit()
+		self.interval_box.setEnabled(False)
+
+		lay_tinterval = QHBoxLayout() 
+		lay_tinterval.addWidget(self.interval)
+		lay_tinterval.addWidget(self.interval_box)
+
+		lay_interval = QVBoxLayout()
+		lay_interval.addWidget(self.enable_interval)
+		lay_interval.addLayout(lay_tinterval)
+		
+		#***********new segment for setting y-axis start value
+		self.enable_ystart = QCheckBox("Set Y-Axis start value")
+		self.enable_ystart.setEnabled(True)
+		self.enable_ystart.setChecked(False)
+		self.enable_ystart.stateChanged.connect(self.ystart_func)
+
+		self.ystart_box = QLineEdit()
+		self.ystart_box.setEnabled(False)
+
+		lay_ystart = QHBoxLayout()
+		lay_ystart.addWidget(self.enable_ystart)
+		lay_ystart.addWidget(self.ystart_box)
 
 		self.cbx = QComboBox()
 		self.cby = QComboBox()
@@ -837,8 +1077,11 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 
 		lay_xx.addWidget(self.cbx)
 		lay_xx.addLayout(lay_x_s)
+		
+
 		lay_yy.addWidget(self.cby)
 		lay_yy.addLayout(lay_y_s)
+		lay_33.addWidget(self.barstyle_cb)
 		lay_33.addWidget(self.cb3)
 		lay_33.addWidget(self.enable_cb_3)
 		lay_44.addWidget(self.cb4)
@@ -847,11 +1090,20 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		lay_zz.addLayout(lay_z_s)
 		lay_zz.addWidget(self.enable_3d)
 
+		lay_y_custom.addLayout(lay_ylabelf)
 		lay_y_custom.addLayout(lay_yy)
+		lay_y_custom.addLayout(lay_ystart)
 		lay_y_custom.addLayout(lay_custom)
 		lay_y_custom.addWidget(self.enable_custom_formula)
+		
 
-		group_box_x.setLayout(lay_xx)
+		lay_newx = QVBoxLayout()
+		lay_newx.addLayout(lay_xlabelf)
+		lay_newx.addLayout(lay_xx)
+		lay_newx.addLayout(lay_interval)
+
+
+		group_box_x.setLayout(lay_newx)
 		group_box_y.setLayout(lay_y_custom)
 		group_box_3.setLayout(lay_33)
 		group_box_4.setLayout(lay_44)
@@ -862,6 +1114,7 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		lay_up_cb.addWidget(self.swap_axis_but)
 		lay_up_cb.addWidget(self.update_constraints_but)
 		lay_up_cb.addWidget(self.undo_but)
+		lay_up_cb.addWidget(self.redo_but)
 
 		lay_title.addWidget(self.title_label)
 		lay_title.addWidget(self.title_name)
@@ -903,20 +1156,315 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 
 		self.col_fil = col_filtering_window()
 		self.set_cons= update_constraints_window()
-	def undo_func(self):						#runs the old version used for generating the constraints file
-		f = open("constraints.ecl","w+")
-		f.write(range_constraints_string)
-		f.write(undo_old);
-		f.close()
-		os.system("../eclipse/bin/x86_64_linux/eclipse -f ../eclipse/tmp/test.ecl -f constraints.ecl -e main,fail")
-		file_change = open("file.txt","r")
-		newfile = open("generated.csv","w")
-		x = file_change.readlines()
-		for i in x:
-			newfile.write(i[1:-2]+'\n')
-		file_change.close()
-		newfile.close()
+
+	# def undo_func(self):						#runs the old version used for generating the constraints file
+	# 	f = open("constraints.ecl","w+")
+	# 	f.write(range_constraints_string)
+	# 	f.write(undo_old);
+	# 	f.close()
+	# 	os.system("../eclipse/bin/x86_64_linux/eclipse -f ../eclipse/tmp/test.ecl -f constraints.ecl -e main,fail")
+	# 	file_change = open("file.txt","r")
+	# 	newfile = open("generated.csv","w")
+	# 	x = file_change.readlines()
+	# 	for i in x:
+	# 		newfile.write(i[1:-2]+'\n')
+	# 	file_change.close()
+	# 	newfile.close()
 	
+	def undo_func(self):											#Undo function for plot
+		import os
+		global col_fil_list
+		if(os.path.isfile('out_cfg1.csv') == True):
+			if(os.path.isfile('out_cfg.csv') == True):
+				os.popen('cp out_cfg.csv out_cfg0.csv') 
+
+			os.rename('out_cfg1.csv', 'out_cfg.csv')
+			f = open("out_cfg.csv",'rU')      
+			configLines = []                                                                                                         
+			while True :
+				configLine = f.readline().split(",") 																								# settings are stored as comma seperated values
+				if configLine == [""]:
+					break
+				configLines.append(configLine)
+			curr_filename = configLines[0][0]
+
+			index = self.cbx.findText(configLines[0][1], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cbx.setCurrentIndex(index)
+			index = self.cby.findText(configLines[0][2], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cby.setCurrentIndex(index)
+
+			if configLines[0][3] == '1':
+				self.enable_3d.setChecked(True)
+				index = self.cbz.findText(configLines[0][4], QtCore.Qt.MatchFixedString)
+				if index >= 0:
+					self.cbz.setCurrentIndex(index)
+			elif configLines[0][3] == '3':
+				self.enable_plot_pareto.setChecked(True)
+				if configLines[0][4] == '1':
+					index = self.pareto_cbx.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '2':
+					index = self.pareto_cbx.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '3':
+					index = self.pareto_cbx.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '4':
+					index = self.pareto_cbx.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+
+			index = self.cb4.findText(configLines[0][5], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cb4.setCurrentIndex(index)
+				self.enable_cb_4.setChecked(True)
+			else:
+				self.enable_cb_4.setChecked(False)
+			index = self.cb3.findText(configLines[0][6], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cb3.setCurrentIndex(index)
+				self.enable_cb_3.setChecked(True)
+			else:
+				self.enable_cb_3.setChecked(False)
+			if(configLines[0][7] != ''):
+				self.title_name.setText(configLines[0][7])
+				self.enable_title.setChecked(True)
+			else:
+				self.enable_title.setChecked(False)
+				
+			self.spxl.setValue(float(configLines[0][9]))
+			self.spxl_valuechange()
+			self.spxh.setValue(float(configLines[0][10]))
+			self.spxh_valuechange()
+			self.spyl.setValue(float(configLines[0][11]))
+			self.spyl_valuechange()
+			self.spyh.setValue(float(configLines[0][12]))
+			self.spyh_valuechange()
+			self.spzl.setValue(float(configLines[0][13]))
+			self.spzl_valuechange()
+			self.spzh.setValue(float(configLines[0][14]))
+			self.spzh_valuechange()
+			
+			for n in range(int(configLines[0][15])):
+				col_fil_list[configLines[0][16 + 3*n]] = (float(configLines[0][16 + 3*n+1]), float(configLines[0][16 + 3*n+2]))
+			self.col_fil.for_undo_redo()
+			
+			index = self.barstyle_cb.findText(configLines[0][-12], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.barstyle_cb.setCurrentIndex(index)
+
+			if(configLines[0][-11] != ''):
+				self.col_fil.enable_noresize.setChecked(True)
+			else:
+				self.col_fil.enable_noresize.setChecked(False)
+
+			if(configLines[0][-9] != ''):
+				self.enable_yval.setChecked(True)
+			else:
+				self.enable_yval.setChecked(False)	
+
+			if(configLines[0][-8] != ''):
+				self.xlabel_name.setText(configLines[0][-8])
+				self.enable_xlabel.setChecked(True)
+			else:
+				self.enable_xlabel.setChecked(False)
+			if(configLines[0][-7] != ''):
+				self.ylabel_name.setText(configLines[0][-7])
+				self.enable_ylabel.setChecked(True)
+			else:
+				self.enable_ylabel.setChecked(False)
+
+			index = self.norm_cb.findText(configLines[0][-6], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.norm_cb.setCurrentIndex(index)
+
+			index = self.bargraph_cb.findText(configLines[0][-5], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.bargraph_cb.setCurrentIndex(index)
+			
+			index = self.graph_type_cb.findText(configLines[0][-4], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.graph_type_cb.setCurrentIndex(index)
+			
+			if(configLines[0][-2] != ''):
+				self.interval_box.setText(configLines[0][-2])
+				self.enable_ylabel.setChecked(True)
+			else:
+				self.enable_ylabel.setChecked(False)		
+			f.close()
+			self.call_plot()
+		else:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Warning)
+			msg.setText("Cannot Undo as this is the first plot")
+			msg.setWindowTitle("Error")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+
+	def redo_func(self):										#Redo function for plot
+		import os
+		global col_fil_list
+		if(os.path.isfile('out_cfg0.csv') == True):
+			if(os.path.isfile('out_cfg.csv') == True):
+				os.popen('cp out_cfg.csv out_cfg1.csv') 
+				
+			os.rename('out_cfg0.csv', 'out_cfg.csv')
+			f = open("out_cfg.csv",'rU')      
+			configLines = []                                                                                                         
+			while True :
+				configLine = f.readline().split(",") 																								# settings are stored as comma seperated values
+				if configLine == [""]:
+					break
+				configLines.append(configLine)
+			curr_filename = configLines[0][0]
+
+			index = self.cbx.findText(configLines[0][1], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cbx.setCurrentIndex(index)
+			index = self.cby.findText(configLines[0][2], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cby.setCurrentIndex(index)
+
+			if configLines[0][3] == '1':
+				self.enable_3d.setChecked(True)
+				index = self.cbz.findText(configLines[0][4], QtCore.Qt.MatchFixedString)
+				if index >= 0:
+					self.cbz.setCurrentIndex(index)
+			elif configLines[0][3] == '3':
+				self.enable_plot_pareto.setChecked(True)
+				if configLines[0][4] == '1':
+					index = self.pareto_cbx.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '2':
+					index = self.pareto_cbx.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '3':
+					index = self.pareto_cbx.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+				elif configLines[0][4] == '4':
+					index = self.pareto_cbx.findText("Maximize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cbx.setCurrentIndex(index)
+					index = self.pareto_cby.findText("Minimize", QtCore.Qt.MatchFixedString)
+					if index >= 0:
+						self.pareto_cby.setCurrentIndex(index)
+
+			index = self.cb4.findText(configLines[0][5], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cb4.setCurrentIndex(index)
+				self.enable_cb_4.setChecked(True)
+			else:
+				self.enable_cb_4.setChecked(False)
+			index = self.cb3.findText(configLines[0][6], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.cb3.setCurrentIndex(index)
+				self.enable_cb_3.setChecked(True)
+			else:
+				self.enable_cb_3.setChecked(False)
+			if(configLines[0][7] != ''):
+				self.title_name.setText(configLines[0][7])
+				self.enable_title.setChecked(True)
+			else:
+				self.enable_title.setChecked(False)
+				
+			self.spxl.setValue(float(configLines[0][9]))
+			self.spxl_valuechange()
+			self.spxh.setValue(float(configLines[0][10]))
+			self.spxh_valuechange()
+			self.spyl.setValue(float(configLines[0][11]))
+			self.spyl_valuechange()
+			self.spyh.setValue(float(configLines[0][12]))
+			self.spyh_valuechange()
+			self.spzl.setValue(float(configLines[0][13]))
+			self.spzl_valuechange()
+			self.spzh.setValue(float(configLines[0][14]))
+			self.spzh_valuechange()
+
+			for n in range(int(configLines[0][15])):
+				col_fil_list[configLines[0][16 + 3*n]] = (float(configLines[0][16 + 3*n+1]), float(configLines[0][16 + 3*n+2]))
+			self.col_fil.for_undo_redo()
+			
+			index = self.barstyle_cb.findText(configLines[0][-12], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.barstyle_cb.setCurrentIndex(index)
+
+			if(configLines[0][-11] != ''):
+				self.col_fil.enable_noresize.setChecked(True)
+			else:
+				self.col_fil.enable_noresize.setChecked(False)
+
+			if(configLines[0][-9] != ''):
+				self.enable_yval.setChecked(True)
+			else:
+				self.enable_yval.setChecked(False)	
+
+			if(configLines[0][-8] != ''):
+				self.xlabel_name.setText(configLines[0][-8])
+				self.enable_xlabel.setChecked(True)
+			else:
+				self.enable_xlabel.setChecked(False)
+			if(configLines[0][-7] != ''):
+				self.ylabel_name.setText(configLines[0][-7])
+				self.enable_ylabel.setChecked(True)
+			else:
+				self.enable_ylabel.setChecked(False)
+
+			index = self.norm_cb.findText(configLines[0][-6], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.norm_cb.setCurrentIndex(index)
+
+			index = self.bargraph_cb.findText(configLines[0][-5], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.bargraph_cb.setCurrentIndex(index)
+			
+			index = self.graph_type_cb.findText(configLines[0][-4], QtCore.Qt.MatchFixedString)
+			if index >= 0:
+				self.graph_type_cb.setCurrentIndex(index)
+			
+			if(configLines[0][-2] != ''):
+				self.interval_box.setText(configLines[0][-2])
+				self.enable_ylabel.setChecked(True)
+			else:
+				self.enable_ylabel.setChecked(False)		
+			f.close()
+			self.call_plot()
+		else:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Warning)
+			msg.setText("Cannot Redo as this is the latest plot")
+			msg.setWindowTitle("Error")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+			
 
 	def pareto_func(self):										#to enable and disable the widgets in the pareto window
 		if self.enable_plot_pareto.isChecked():
@@ -978,6 +1526,11 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		global final_constraints
 		global col_fil_list
 		global col_with_strings
+
+		import os
+		if(os.path.isfile('out_cfg.csv') == True):
+			os.popen('cp out_cfg.csv out_cfg1.csv') 
+
 		out_cfg = open("out_cfg.csv",'w')
 		cfg_writer = csv.writer(out_cfg)
 		global curr_filename
@@ -1026,12 +1579,12 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 							out_list.append('3')
 				else:
 					out_list.extend(['4',''])
-				if self.enable_cb_3.isChecked():
-					out_list.append(self.cb3.currentText())
-				else:
-					out_list.append('')
 				if self.enable_cb_4.isChecked():
 					out_list.append(self.cb4.currentText())
+				else:
+					out_list.append('')
+				if self.enable_cb_3.isChecked() and self.enable_cb_3.isEnabled():
+					out_list.append(self.cb3.currentText())
 				else:
 					out_list.append('')
 				if self.enable_title.isChecked():
@@ -1042,12 +1595,41 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 					out_list.append('t')
 				else:
 					out_list.append('f')
+				
 				out_list.extend([self.spxl.value(),self.spxh.value(),self.spyl.value(),self.spyh.value(),self.spzl.value(),self.spzh.value()])
 				out_list.append(len(fields) - len(col_with_strings))
 				for key in col_fil_list:
 					tup = col_fil_list[key]
 					out_list.extend([key,tup[0],tup[1]])
-					
+				
+				out_list.append(self.barstyle_cb.currentText())
+
+				if self.col_fil.enable_noresize.isChecked():
+					out_list.append('1')
+				else:
+					out_list.append('')
+
+				if self.enable_ystart.isChecked():
+					out_list.append(self.ystart_box.text())
+				else:
+					out_list.append('')
+
+				if self.enable_yval.isChecked():
+					out_list.append('1')
+				else:
+					out_list.append('')
+
+				if self.enable_xlabel.isChecked():
+					out_list.append(self.xlabel_name.text())
+				else:
+					out_list.append('')
+				if self.enable_ylabel.isChecked():
+					out_list.append(self.ylabel_name.text())
+				else:
+					out_list.append('')
+
+				out_list.append(self.norm_cb.currentText())
+				out_list.append(self.bargraph_cb.currentText())	
 				out_list.extend(final_constraints)
 
 				out_list.append(self.graph_type_cb.currentText())
@@ -1055,6 +1637,11 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 					out_list.append(self.curve_fitting_sb.value())
 				else:
 					out_list.append('')
+				if self.enable_interval.isChecked():
+					out_list.append(self.interval_box.text())
+				else:
+					out_list.append('')  
+
 				out_list.append('junk')
 				cfg_writer.writerow(out_list)
 				out_cfg.close()
@@ -1117,6 +1704,47 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 		else:
 			self.title_label.setEnabled(False)
 			self.title_name.setEnabled(False)
+
+	def xlabel_func(self):								#to enable/disable x-axis title bar
+		if self.enable_xlabel.isChecked():
+			self.xlabel_label.setEnabled(True)
+			self.xlabel_name.setEnabled(True)
+		else:
+			self.xlabel_label.setEnabled(False)
+			self.xlabel_name.setEnabled(False)
+
+	def ylabel_func(self):								#to enable/disable y-axis title bar
+		if self.enable_ylabel.isChecked():
+			self.ylabel_label.setEnabled(True)
+			self.ylabel_name.setEnabled(True)
+		else:
+			self.ylabel_label.setEnabled(False)
+			self.ylabel_name.setEnabled(False)
+
+	def interval_func(self):
+		if self.enable_interval.isChecked():
+			self.interval.setEnabled(True)
+			self.interval_box.setEnabled(True)
+		else:
+			self.interval.setEnabled(False)
+			self.interval_box.setEnabled(False)
+
+	def ystart_func(self):
+		if self.enable_ystart.isChecked():
+			self.ystart_box.setEnabled(True)
+		else:
+			self.ystart_box.setEnabled(False)
+
+
+	def bargraph_func(self):
+		if self.bargraph_cb.currentText() == "All":
+			self.enable_cb_3.setEnabled(False)
+			self.cb3.setEnabled(False)
+			self.barstyle_cb.setEnabled(True)
+		else:
+			self.enable_cb_3.setEnabled(True)
+			self.barstyle_cb.setEnabled(True)
+			self.enable_func_3()
 
 	def column_filtering_func(self):					#shows the column filtering window
 		self.col_fil.show()
@@ -1224,11 +1852,20 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 			self.enable_custom_formula.setEnabled(False)
 			self.enable_curve_fitting.setEnabled(False)
 			self.enable_plot_pareto.setEnabled(False)
-			self.enable_cb_3.setEnabled(False)
+			self.enable_cb_4.setEnabled(False)
+			self.cb4.setEnabled(False)
+			self.barstyle_cb.setEnabled(True)
+			self.bargraph_cb.setEnabled(False)
+			self.norm.setEnabled(True)
+			self.norm_cb.setEnabled(True)
+			self.enable_ylabel.setEnabled(False)
+			self.ylabel_label.setEnabled(False)
+			self.ylabel_name.setEnabled(False)
+			self.enable_interval.setEnabled(True)
+			self.interval_func()
+			self.enable_yval.setEnabled(True)
 
-
-
-		elif b == "bar-graph":
+		elif b == "bar-graph" :
 			self.slyl.setEnabled(True)
 			self.slyh.setEnabled(True)
 			self.spyh.setEnabled(True)
@@ -1236,8 +1873,43 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 			self.cby.setEnabled(True)
 			self.enable_curve_fitting.setEnabled(False)
 			self.enable_plot_pareto.setEnabled(False)
-			self.enable_cb_3.setEnabled(False)
+			self.enable_cb_4.setEnabled(True)
+			self.enable_func_4()
+			# self.enable_cb_4.setEnabled(False)
+			# self.cb4.setEnabled(False)
+			self.barstyle_cb.setEnabled(True)
 			self.enable_custom_formula.setEnabled(False)
+			self.bargraph_cb.setEnabled(True)
+			self.norm.setEnabled(False)
+			self.norm_cb.setEnabled(False)
+			self.enable_ylabel.setEnabled(True)
+			self.ylabel_label.setEnabled(True)
+			self.ylabel_func()
+			self.enable_interval.setEnabled(False)
+			self.interval.setEnabled(False)
+			self.interval_box.setEnabled(False)
+			self.enable_yval.setEnabled(True)
+
+		elif b == "bar-scatter" :
+			self.slyl.setEnabled(True)
+			self.slyh.setEnabled(True)
+			self.spyh.setEnabled(True)
+			self.spyl.setEnabled(True)
+			self.cby.setEnabled(True)
+			self.enable_curve_fitting.setEnabled(False)
+			self.enable_plot_pareto.setEnabled(False)
+			self.enable_cb_4.setEnabled(False)
+			self.enable_custom_formula.setEnabled(False)
+			self.barstyle_cb.setEnabled(False)
+			self.bargraph_cb.setEnabled(False)
+			self.norm.setEnabled(False)
+			self.norm_cb.setEnabled(False)
+			self.enable_ylabel.setEnabled(True)
+			self.ylabel_func()
+			self.enable_interval.setEnabled(False)
+			self.interval.setEnabled(False)
+			self.interval_box.setEnabled(False)
+			self.enable_yval.setEnabled(False)
 
 		else:
 			self.slyl.setEnabled(True)
@@ -1248,7 +1920,18 @@ class sub_window(QWidget):										#class defining the sub windows(as they appe
 			self.enable_custom_formula.setEnabled(True)
 			self.enable_curve_fitting.setEnabled(True)
 			self.enable_plot_pareto.setEnabled(True)
-			self.enable_cb_3.setEnabled(True)
+			self.enable_cb_4.setEnabled(True)
+			self.enable_func_4()
+			self.bargraph_cb.setEnabled(False)
+			self.norm.setEnabled(False)
+			self.norm_cb.setEnabled(False)
+			self.enable_ylabel.setEnabled(True)
+			self.ylabel_func()
+			self.barstyle_cb.setEnabled(False)
+			self.enable_interval.setEnabled(False)
+			self.interval.setEnabled(False)
+			self.interval_box.setEnabled(False)
+			self.enable_yval.setEnabled(False)
 
 	def selectionchangex(self):							#changes the upper and lower limits of sliders/spin boxes based on the current selected field
 														#also disables them if the current field has strings as values(X-AXIS)
@@ -1457,6 +2140,8 @@ class test(QMainWindow):								#main window which houses all the tabs
 			if xy not in col_with_strings:
 				s.col_fil.cb.addItem(xy)
 		
+
+
 		if(lower_limit):  
 			b = str(PyQt4.QtCore.QString(s.cby.currentText()))
 			if b not in col_with_strings:
@@ -1518,6 +2203,9 @@ class test(QMainWindow):								#main window which houses all the tabs
 					s.cbz.addItem(xy)
 					if xy not in col_with_strings:
 						s.col_fil.cb.addItem(xy)
+						s.col_fil.display.append(xy)
+						s.col_fil.displ.append(str(lower_limit[xy]))
+						s.col_fil.dispu.append(str(upper_limit[xy]))
 
 				if self.count==20:
 					msg = QMessageBox()
@@ -1608,6 +2296,8 @@ class test(QMainWindow):								#main window which houses all the tabs
 			with f:
 				reader = csv.reader(f)
 				fields = reader.next()
+				# for zn, field in enumerate(fields):
+				# 	fields[zn] = field.strip()
 				flag=0
 				for x in fields:
 					if x.isdigit():
@@ -1642,11 +2332,21 @@ class test(QMainWindow):								#main window which houses all the tabs
 						i.cbz.addItem(xy)
 						if xy not in col_with_strings:
 							i.col_fil.cb.addItem(xy)
+
 				for i in xrange(len(fields)):
 					if fields[i] not in col_with_strings:
 						lower_limit[fields[i]] = lll[i]
 						upper_limit[fields[i]] = ull[i]
 						col_fil_list[fields[i]] = (lll[i],ull[i])
+
+				for xy in fields:
+					for j in range(self.t.count()):
+						i = self.t.widget(j)
+						if xy not in col_with_strings:
+							i.col_fil.display.append(xy)
+							i.col_fil.displ.append(str(lower_limit[xy]))
+							i.col_fil.dispu.append(str(upper_limit[xy]))
+
 				for j in range(self.t.count()):
 					i = self.t.widget(j)
 					b = str(PyQt4.QtCore.QString(i.cby.currentText()))
@@ -1692,6 +2392,7 @@ class test(QMainWindow):								#main window which houses all the tabs
 					i.col_fil.sl_h.setValue(100)
 					i.col_fil.sp_l.setValue(lower_limit[b])
 					i.col_fil.sp_h.setValue(upper_limit[b])
+
 					i.slzl.setEnabled(False)
 					i.slzh.setEnabled(False)
 					i.spzl.setEnabled(False)
