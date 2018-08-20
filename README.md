@@ -16,7 +16,7 @@ This is a python based visualization tool which can do generic plotting of data 
 The work under development also includes being able to generate constraints in CLP format and use the CLP tool to perform pruning of design points.<br />
 
 There are various help documents prepared to help the users understand the interface of the tool.<br />
-Starter guide: https://docs.google.com/document/d/e/2PACX-1vRG7XnZ8qOi3RlXKGATuPzoFae09JCIP-yQE4Ws-3BckeBBSeeMum0XApC3uafGaJFGBBPPBBtVeKoW/pub
+Starter guide: https://docs.google.com/document/d/e/2PACX-1vRGrwWNpEYs6FM8BnEcTJHmQyUTPhmg7Ai1Ox0ePyM4Dk4OocPWX_KYOjCJbsTXcZcNuHnVJLmTMujx/pub
 
 Videos:
 1. http://www.cse.iitd.ac.in/~kedia/visualization_tool/videos/v1.mp4 <br />
